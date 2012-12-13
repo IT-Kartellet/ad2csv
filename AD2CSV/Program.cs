@@ -81,7 +81,7 @@ namespace AD2CSV
                 }
                 Console.WriteLine(String.Join(";", line));
             }
-            Console.ReadKey();
+            //Console.ReadKey();
         }
     }
 }
