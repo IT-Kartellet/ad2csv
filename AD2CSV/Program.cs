@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.DirectoryServices;
 using System.Linq;
 using System.Text;
@@ -12,23 +13,13 @@ namespace AD2CSV
     {
         static void Main(string[] args)
         {
-            var filters = new Dictionary<string, Regex>() {
-                { "mail", new Regex(@"@damco\.com$") }
-            };
+            var delimiter = Char.Parse(ConfigurationManager.AppSettings["Delimiter"]);
+            var quotechar = Char.Parse(ConfigurationManager.AppSettings["QuoteChar"]);
+            var quotealways = Boolean.Parse(ConfigurationManager.AppSettings["QuoteAlways"]);
 
-            var headers = new List<string>()
-            {
-                "Person_UniqueID", "Person_FirstName","Person_LastName","Person_NotificationMailAddress","OfficePhoneNumber","MobilePhoneNumber","OfficeFaxNumber","TypeOfStaff_Desc","Person_Function","Person_JobTitle","Person_Section","OBU_Name","Department_Name","Manager_UniqueID","Location_Code","Location_AddressLine1","Location_AddressLine2","Country_Name","City_Name","Location_Latitude","Location_Longitude"
-            };
-
-            var properties = new List<string>()
-            {
-                "sAMAccountName", "givenName", "sn", "mail", "telephoneNumber", "", "facsimileTelephoneNumber", "employeeType", "", "title", "", "", "", "", "", "", "", "", "", 
-            };
-
-            var delimiter = ";";
-            var quotechar = "\"";
-            var quotealways = true;
+            var filters = ConfigurationManager.AppSettings["Filters"].Split(delimiter).ToDictionary(s => s.Split('=')[0], y => new Regex(y.Split('=')[1]));
+            var headers = ConfigurationManager.AppSettings["Headers"].Split(delimiter);
+            var properties = ConfigurationManager.AppSettings["Properties"].Split(delimiter);
 
             DirectorySearcher ds = new DirectorySearcher();
             SearchResult sr = ds.FindOne();
@@ -46,7 +37,7 @@ namespace AD2CSV
             searcher.SearchScope = SearchScope.Subtree;
             searcher.Filter = "ObjectClass=person";
 
-            Console.WriteLine(String.Join(";", headers));
+            Console.WriteLine(String.Join(delimiter.ToString(), headers));
             foreach (SearchResult item in searcher.FindAll())
             {
                 DirectoryEntry entry = item.GetDirectoryEntry();
@@ -76,7 +67,7 @@ namespace AD2CSV
                         var value = entry.Properties[name][0].ToString();
                         if (quotealways || value.IndexOf(quotechar) > -1 || value.IndexOf(delimiter) > -1)
                         {
-                            line.Add(value.Replace(quotechar, quotechar + quotechar));
+                            line.Add(value.Replace(quotechar.ToString(), (quotechar + quotechar).ToString()));
                         }
                         else
                         {
