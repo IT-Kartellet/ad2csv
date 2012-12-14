@@ -20,7 +20,7 @@ namespace AD2CSV
             foreach (var filterstr in ConfigurationManager.AppSettings["Filters"].Split(delimiter))
             {
                 var name = filterstr.Substring(0, filterstr.IndexOf("="));
-                var regex = new Regex(filterstr.Substring(filterstr.IndexOf("=")));
+                var regex = new Regex(filterstr.Substring(filterstr.IndexOf("=") + 1));
                 filters.Add(name, regex);
             }
             var headers = ConfigurationManager.AppSettings["Headers"].Split(delimiter);
@@ -43,7 +43,7 @@ namespace AD2CSV
             searcher.SearchScope = SearchScope.Subtree;
             searcher.Filter = "ObjectClass=person";
 
-            using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile, true))
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile, false))
             {
                 file.WriteLine(String.Join(delimiter.ToString(), headers));
 
@@ -55,7 +55,7 @@ namespace AD2CSV
                     var skip = false;
                     foreach (var filter in filters)
                     {
-                        if (entry.Properties.Contains(filter.Key) && entry.Properties[filter.Key].Count > 0 && !filter.Value.IsMatch(entry.Properties[filter.Key].ToString(), 0))
+                        if (entry.Properties.Contains(filter.Key) && entry.Properties[filter.Key].Count > 0 && filter.Value.IsMatch(entry.Properties[filter.Key].Value.ToString(), 0))
                         {
                             // DO nothing 
                         }
