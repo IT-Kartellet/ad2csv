@@ -66,15 +66,18 @@ namespace AD2CSV
             searcher.ReferralChasing = ReferralChasingOption.All;
             searcher.SearchScope = SearchScope.Subtree;
             searcher.Filter = "(&(sAMAccountType=805306368)(ObjectClass=person))";
-
+			
+            int count = 0;
             using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile, false))
             {
                 file.WriteLine(String.Join(delimiter.ToString(), headers));
 
+                Console.Write("Search AD for users");
                 foreach (SearchResult item in searcher.FindAll())
                 {
                     DirectoryEntry entry = item.GetDirectoryEntry();
-
+					Console.Write(".");
+					
                     // Filter values and skip entry if they don't match
                     var skip = false;
                     foreach (var filter in filters)
@@ -90,9 +93,9 @@ namespace AD2CSV
                                 }
                             }
                         }
+                        if (skip) continue;
                     }
-                    if (skip) continue;
-
+                   	
                     // Create line for output 
                     var line = new List<string>();
                     foreach (var name in properties)
