@@ -51,11 +51,11 @@ namespace AD2CSV
                 {
                     DirectoryEntry entry = item.GetDirectoryEntry();
 
-                    // Filter values and skip entry if they match
+                    // Filter values and skip entry if they don't match
                     var skip = false;
                     foreach (var filter in filters)
                     {
-                        if (entry.Properties[filter.Key].Count > 0 && !filter.Value.IsMatch(entry.Properties[filter.Key].ToString(), 0))
+                        if (entry.Properties.Contains(filter.Key) && entry.Properties[filter.Key].Count > 0 && !filter.Value.IsMatch(entry.Properties[filter.Key].ToString(), 0))
                         {
                             // DO nothing 
                         }
@@ -71,7 +71,7 @@ namespace AD2CSV
                     var line = new List<string>();
                     foreach (var name in properties)
                     {
-                        if (!String.IsNullOrEmpty(name) && entry.Properties[name].Count > 0)
+                        if (!String.IsNullOrEmpty(name) && entry.Properties.Contains(name) && entry.Properties[name].Count > 0)
                         {
                             var value = entry.Properties[name][0].ToString();
                             if (quotealways || value.IndexOf(quotechar) > -1 || value.IndexOf(delimiter) > -1)
