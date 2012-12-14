@@ -28,6 +28,27 @@ namespace AD2CSV
                 quotealways = false;
             }
 
+            var headers = new string[]{};
+            if(ConfigurationManager.AppSettings["Headers"] != null) {
+                headers = ConfigurationManager.AppSettings["Headers"].Split(delimiter);
+            }
+            var properties = new string[] { };
+            if(ConfigurationManager.AppSettings["Properties"] != null) {
+                properties = ConfigurationManager.AppSettings["Properties"].Split(delimiter);            
+            }
+            var outfile = ConfigurationManager.AppSettings["OutFile"];
+            if (outfile == null)
+            {
+                throw new Exception("OutFile has to be set");
+            }
+
+            var propload = new List<string>();
+            foreach(var prop in properties) {
+                if(!String.IsNullOrEmpty(prop)) {
+                    propload.Add(prop);
+                }
+            }
+
             var filters = new Dictionary<string, Regex>();
             if(ConfigurationManager.AppSettings["Filters"] != null) {
                 foreach (var filterstr in ConfigurationManager.AppSettings["Filters"].Split(delimiter))
@@ -35,20 +56,8 @@ namespace AD2CSV
                     var name = filterstr.Substring(0, filterstr.IndexOf("="));
                     var regex = new Regex(filterstr.Substring(filterstr.IndexOf("=") + 1));
                     filters.Add(name, regex);
+                    propload.Add(name);
                 }
-            }
-            var headers = new string[]{};
-            if(ConfigurationManager.AppSettings["Headers"] != null) {
-                headers = ConfigurationManager.AppSettings["Headers"].Split(delimiter);
-            }
-            var properties = new string[] { };
-            if(ConfigurationManager.AppSettings["Properties"] != null) {
-                properties = ConfigurationManager.AppSettings["Properties"].Split(delimiter);
-            }
-            var outfile = ConfigurationManager.AppSettings["OutFile"];
-            if (outfile == null)
-            {
-                throw new Exception("OutFile has to be set");
             }
 
             DirectorySearcher ds = new DirectorySearcher();
@@ -62,10 +71,10 @@ namespace AD2CSV
                 AuthenticationTypes.Secure
             );
 
-            DirectorySearcher searcher = new DirectorySearcher(root);
+            DirectorySearcher searcher = new DirectorySearcher(root, "(&(sAMAccountType=805306368)(ObjectClass=person))", propload.ToArray());
             searcher.ReferralChasing = ReferralChasingOption.All;
             searcher.SearchScope = SearchScope.Subtree;
-            searcher.Filter = "(&(sAMAccountType=805306368)(ObjectClass=person))";
+            searcher.PageSize = 1000;
 
             using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile, false))
             {
