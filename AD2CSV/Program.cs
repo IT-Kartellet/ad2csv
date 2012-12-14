@@ -71,8 +71,14 @@ namespace AD2CSV
                 AuthenticationTypes.Secure
             );
 
+            Console.WriteLine("Search AD for users in root {0}", root.Properties["distinguishedName"][0]);
+            Console.WriteLine("Filters: ");
+            foreach (var filter in filters) {
+            	Console.WriteLine("  {0} = {1}", filter.Key, filter.Value);
+            }
+            
             DirectorySearcher searcher = new DirectorySearcher(root, "(&(sAMAccountType=805306368)(ObjectClass=person))", propload.ToArray());
-            searcher.ReferralChasing = ReferralChasingOption.All;
+            searcher.ReferralChasing = ReferralChasingOption.None;
             searcher.SearchScope = SearchScope.Subtree;
             searcher.PageSize = 1000;
 			
@@ -81,11 +87,11 @@ namespace AD2CSV
             {
                 file.WriteLine(String.Join(delimiter.ToString(), headers));
 
-                Console.Write("Search AD for users");
+
                 foreach (SearchResult item in searcher.FindAll())
                 {
                     DirectoryEntry entry = item.GetDirectoryEntry();
-					Console.Write(".");
+                    if(count % 10 == 0) Console.Write(".");
 					
                     // Filter values and skip entry if they don't match
                     var skip = false;
