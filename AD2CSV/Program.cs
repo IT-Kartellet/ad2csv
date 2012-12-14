@@ -127,8 +127,11 @@ namespace AD2CSV
                         }
                     }
                     file.WriteLine(String.Join(";", line.ToArray()));
+                    count++;
                 }
             }
+            Console.WriteLine();
+            Console.WriteLine("Count: {0}", count);
         }
     }
 }
