@@ -12,20 +12,44 @@ namespace AD2CSV
     {
         static void Main(string[] args)
         {
-            var delimiter = Char.Parse(ConfigurationManager.AppSettings["Delimiter"]);
-            var quotechar = Char.Parse(ConfigurationManager.AppSettings["QuoteChar"]);
-            var quotealways = Boolean.Parse(ConfigurationManager.AppSettings["QuoteAlways"]);
+            char delimiter;
+            if (!Char.TryParse(ConfigurationManager.AppSettings["Delimiter"], out delimiter))
+            {
+                delimiter = ';';
+            }
+
+            char quotechar;
+            if(!Char.TryParse(ConfigurationManager.AppSettings["QuoteChar"], out quotechar)) {
+                quotechar = '"';
+            }
+            
+            bool quotealways;
+            if(!Boolean.TryParse(ConfigurationManager.AppSettings["QuoteAlways"], out quotealways)) {
+                quotealways = false;
+            }
 
             var filters = new Dictionary<string, Regex>();
-            foreach (var filterstr in ConfigurationManager.AppSettings["Filters"].Split(delimiter))
-            {
-                var name = filterstr.Substring(0, filterstr.IndexOf("="));
-                var regex = new Regex(filterstr.Substring(filterstr.IndexOf("=") + 1));
-                filters.Add(name, regex);
+            if(ConfigurationManager.AppSettings["Filters"] != null) {
+                foreach (var filterstr in ConfigurationManager.AppSettings["Filters"].Split(delimiter))
+                {
+                    var name = filterstr.Substring(0, filterstr.IndexOf("="));
+                    var regex = new Regex(filterstr.Substring(filterstr.IndexOf("=") + 1));
+                    filters.Add(name, regex);
+                }
             }
-            var headers = ConfigurationManager.AppSettings["Headers"].Split(delimiter);
-            var properties = ConfigurationManager.AppSettings["Properties"].Split(delimiter);
+            var headers = new string[]{};
+            if(ConfigurationManager.AppSettings["Headers"] != null) {
+                headers = ConfigurationManager.AppSettings["Headers"].Split(delimiter);
+            }
+            var properties = new string[] { };
+            if(ConfigurationManager.AppSettings["Properties"] != null) {
+                properties = ConfigurationManager.AppSettings["Properties"].Split(delimiter);
+            }
             var outfile = ConfigurationManager.AppSettings["OutFile"];
+            if (outfile == null)
+            {
+                throw new Exception("OutFile has to be set");
+            }
 
             DirectorySearcher ds = new DirectorySearcher();
             SearchResult sr = ds.FindOne();
@@ -41,7 +65,7 @@ namespace AD2CSV
             DirectorySearcher searcher = new DirectorySearcher(root);
             searcher.ReferralChasing = ReferralChasingOption.All;
             searcher.SearchScope = SearchScope.Subtree;
-            searcher.Filter = "ObjectClass=person";
+            searcher.Filter = "(&(sAMAccountType=805306368)(ObjectClass=person))";
 
             using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile, false))
             {
@@ -55,14 +79,16 @@ namespace AD2CSV
                     var skip = false;
                     foreach (var filter in filters)
                     {
-                        if (entry.Properties.Contains(filter.Key) && entry.Properties[filter.Key].Count > 0 && filter.Value.IsMatch(entry.Properties[filter.Key].Value.ToString(), 0))
+                        // All filters has to match for a record not to be skip'ed
+                        skip = true;
+                        if (entry.Properties.Contains(filter.Key) && entry.Properties[filter.Key].Count > 0)
                         {
-                            // DO nothing 
-                        }
-                        else
-                        {
-                            skip = true;
-                            break;
+                            foreach (var value in entry.Properties[filter.Key]) {
+                                if (filter.Value.IsMatch(value.ToString(), 0))
+                                {
+                                    skip = false;
+                                }
+                            }
                         }
                     }
                     if (skip) continue;
