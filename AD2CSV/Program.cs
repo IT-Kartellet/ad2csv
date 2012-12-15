@@ -108,8 +108,8 @@ namespace AD2CSV
                                 }
                             }
                         }
-                        if (skip) continue;
                     }
+                    if (skip) continue;
                    	
                     // Create line for output 
                     var line = new List<string>();
