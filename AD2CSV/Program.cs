@@ -74,25 +74,24 @@ namespace AD2CSV
             Console.WriteLine("Search AD for users in root {0}", root.Properties["distinguishedName"][0]);
             Console.WriteLine("Filters: ");
             foreach (var filter in filters) {
-            	Console.WriteLine("  {0} = {1}", filter.Key, filter.Value);
+                Console.WriteLine("  {0} = {1}", filter.Key, filter.Value);
             }
             
             DirectorySearcher searcher = new DirectorySearcher(root, "(&(sAMAccountType=805306368)(ObjectClass=person))", propload.ToArray());
             searcher.ReferralChasing = ReferralChasingOption.None;
             searcher.SearchScope = SearchScope.Subtree;
             searcher.PageSize = 1000;
-			
+            
             int count = 0;
             using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile, false))
             {
                 file.WriteLine(String.Join(delimiter.ToString(), headers));
 
-
                 foreach (SearchResult item in searcher.FindAll())
                 {
                     DirectoryEntry entry = item.GetDirectoryEntry();
                     if(count % 10 == 0) Console.Write(".");
-					
+                    
                     // Filter values and skip entry if they don't match
                     var skip = false;
                     foreach (var filter in filters)
@@ -110,7 +109,7 @@ namespace AD2CSV
                         }
                     }
                     if (skip) continue;
-                   	
+                    
                     // Create line for output 
                     var line = new List<string>();
                     foreach (var name in properties)
@@ -118,6 +117,13 @@ namespace AD2CSV
                         if (!String.IsNullOrEmpty(name) && entry.Properties.Contains(name) && entry.Properties[name].Count > 0)
                         {
                             var value = entry.Properties[name][0].ToString();
+
+                            // Replace line breaks with comma
+                            value = value.Replace("\r\n", "\n");
+                            value = value.Replace("\r", "\n");
+                            value = value.Replace("\n", ",");
+
+                            // Check if need to quote the item in the line
                             if (quotealways || value.IndexOf(quotechar) > -1 || value.IndexOf(delimiter) > -1)
                             {
                                 line.Add(value.Replace(quotechar.ToString(), (quotechar + quotechar).ToString()));
