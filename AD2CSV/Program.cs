@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.DirectoryServices;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -122,6 +123,10 @@ namespace AD2CSV
                 skipdisabledaccount = true;
             }
 
+            /* var geonames = new GeoNames("cities1000.txt");
+            Console.ReadKey();
+            return; */
+
             DirectorySearcher ds = new DirectorySearcher();
             SearchResult sr = ds.FindOne();
             var adroot = sr.GetDirectoryEntry().Path;
@@ -182,19 +187,21 @@ namespace AD2CSV
                     }
 
                     // Skip properties that are empty
+                    var skip = false;
                     foreach (var prop in skipemptyproperties)
                     {
                         if (entry.Properties.Contains(prop) && entry.Properties[prop].Count > 0)
                         {
                             foreach (var value in entry.Properties[prop])
                             {
-                                if (String.IsNullOrEmpty(value.ToString())) continue;
+                                if (String.IsNullOrEmpty(value.ToString())) skip = true;
                             }
                         }
                     }
+                    if (skip) continue;
 
                     // Filter values and skip entry if they don't match
-                    var skip = false;
+                    skip = false;
                     foreach (var filter in filters)
                     {
                         // All filters has to match for a record not to be skip'ed
@@ -254,6 +261,55 @@ namespace AD2CSV
             var lowPart = (Int32)adsLargeInteger.GetType().InvokeMember("LowPart", System.Reflection.BindingFlags.GetProperty, null, adsLargeInteger, null);
             return highPart * ((Int64)UInt32.MaxValue + 1) + lowPart;
         }
+    }
 
+    class GeoNamesEntry{
+        int geonameid;
+        string name;
+        string asciiname;
+        string alternatenames;
+        string latitude;
+        string longitude;
+        char feature_class;
+        string feature_code;
+        string country_code;
+        string cc2;
+        string admin1_code;
+        string admin2_code;
+        string admin3_code;
+        string admin4_code;
+        long population;
+        int elevation;
+        string dem;
+        string timezone;
+        string modification_date;
+    }
+
+    class GeoNames
+    {
+        private Dictionary<string, GeoNamesEntry> CityName2Entry = new Dictionary<string, GeoNamesEntry>();
+
+        public GeoNames(string filename) {
+            LoadFromFile(filename);
+        }
+
+        public bool LoadFromFile(string filename) {
+        
+            // Data from : http://download.geonames.org/export/dump/
+            // http://download.geonames.org/export/dump/countryInfo.txt
+            using (StreamReader reader = new StreamReader(filename, System.Text.Encoding.UTF8))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    var cols = line.Split('\t');
+
+
+                    Console.WriteLine(line);
+                }
+            }
+
+            return true;
+        }
     }
 }
