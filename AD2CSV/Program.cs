@@ -79,7 +79,8 @@ namespace AD2CSV
                 }
             }
 
-            var ldapfilter = "(&(&(&(sAMAccountType=805306368)(ObjectClass=person))(sAMAccountName=tlb013))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))";
+            //var ldapfilter = "(&(&(sAMAccountType=805306368)(ObjectClass=person))(sAMAccountName=tlb013))";
+            var ldapfilter = "(&(sAMAccountType=805306368)(ObjectClass=person)))";
             if (ConfigurationManager.AppSettings["LDAPFilters"] != null)
             {
                 ldapfilter = ConfigurationManager.AppSettings["LDAPFilters"];
@@ -95,6 +96,30 @@ namespace AD2CSV
                     filters.Add(name, regex);
                     propload.Add(name);
                 }
+            }
+
+            var skipemptyproperties = new List<string>();
+            if (ConfigurationManager.AppSettings["SkipEmptyProperties"] != null)
+            {
+                skipemptyproperties = new List<string>(ConfigurationManager.AppSettings["SkipEmptyProperties"].Split(delimiter));
+            }
+
+            int skipexpiredpassword;
+            if (!int.TryParse(ConfigurationManager.AppSettings["SkipExpiredPassword"], out skipexpiredpassword))
+            {
+                skipexpiredpassword = 90;
+            }
+
+            bool skipdontexpirepassword;
+            if (!Boolean.TryParse(ConfigurationManager.AppSettings["SkipDontExpirePassword"], out skipdontexpirepassword))
+            {
+                skipdontexpirepassword = true;
+            }
+
+            bool skipdisabledaccount;
+            if (!Boolean.TryParse(ConfigurationManager.AppSettings["SkipDisabledAccount"], out skipdisabledaccount))
+            {
+                skipdisabledaccount = true;
             }
 
             DirectorySearcher ds = new DirectorySearcher();
@@ -131,18 +156,41 @@ namespace AD2CSV
                     DirectoryEntry entry = item.GetDirectoryEntry();
                     if (count % 10 == 0) Console.Write(".");
 
-                    // Check if account has password has Don't expire password set  
                     int UserAccountControl = Convert.ToInt32(entry.Properties["userAccountcontrol"].Value);
-                    if ((UserAccountControl & (int)UserAccountControlFlags.DONT_EXPIRE_PASSWORD) > 0)
+
+                    // Check if account is disabled  
+                    if (skipdisabledaccount && (UserAccountControl & (int)UserAccountControlFlags.ACCOUNTDISABLE) > 0)
                     {
                         continue;
                     }
 
-                    var pwdLastSet = DateTime.FromFileTime(ConvertADSLargeIntegerToInt64(entry.Properties["pwdLastSet"].Value));
-                    var pwdLimit = DateTime.Now.AddMonths(-3);
-                    if (pwdLastSet < pwdLimit)
+                    // Check if account has password has Don't expire password set  
+                    if (skipdontexpirepassword && (UserAccountControl & (int)UserAccountControlFlags.DONT_EXPIRE_PASSWORD) > 0)
                     {
                         continue;
+                    }
+
+                    // Check if the password expired x days ago
+                    if (skipexpiredpassword > 0)
+                    {
+                        var pwdLastSet = DateTime.FromFileTime(ConvertADSLargeIntegerToInt64(entry.Properties["pwdLastSet"].Value));
+                        var pwdLimit = DateTime.Now.AddDays(skipexpiredpassword * -1);
+                        if (pwdLastSet < pwdLimit)
+                        {
+                            continue;
+                        }
+                    }
+
+                    // Skip properties that are empty
+                    foreach (var prop in skipemptyproperties)
+                    {
+                        if (entry.Properties.Contains(prop) && entry.Properties[prop].Count > 0)
+                        {
+                            foreach (var value in entry.Properties[prop])
+                            {
+                                if (String.IsNullOrEmpty(value.ToString())) continue;
+                            }
+                        }
                     }
 
                     // Filter values and skip entry if they don't match
