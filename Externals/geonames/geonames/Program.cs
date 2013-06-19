@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace geonames
 {
@@ -21,7 +20,7 @@ namespace geonames
 		public string PostalCodeFormat;
 		public string PostalCodeRegex;
 		public string Languages;
-		public string GeonameId;
+		public int GeonameId;
 		public string Neighbours;
 		public string EquivalentFipsCode;
 
@@ -46,14 +45,14 @@ namespace geonames
 			this.PostalCodeFormat = PostalCodeFormat;
 			this.PostalCodeRegex = PostalCodeRegex;
 			this.Languages = Languages;
-			this.GeonameId = GeonameId;
+			if(!int.TryParse(GeonameId, out this.GeonameId)) this.GeonameId=0;
 			this.Neighbours = Neighbours;
 			this.EquivalentFipsCode = EquivalentFipsCode;
 		}
 	}
 
 	class GeoName {
-		public string geonameid; //integer id of record in geonames database
+		public int geonameid; //integer id of record in geonames database
 		public string name; //name of geographical point (utf8) varchar(200)
 		public string asciiname; //name of geographical point in plain ascii characters, varchar(200)
 		public string alternatenames; //alternatenames, comma separated varchar(5000)
@@ -67,19 +66,19 @@ namespace geonames
 		public string admin2code; //code for the second administrative division, a county in the US, see file admin2Codes.txt; varchar(80) 
 		public string admin3code; //code for third level administrative division, varchar(20)
 		public string admin4code; //code for fourth level administrative division, varchar(20)
-		public string population; //bigint (8 byte int)
-		public string elevation; //in meters, integer
+		public long population; //bigint (8 byte int)
+		public int elevation; //in meters, integer
 		public string dem; //digital elevation model, srtm3 or gtopo30, average elevation of 3''x3'' (ca 90mx90m) or 30''x30'' (ca 900mx900m) area in meters, integer. srtm processed by cgiar/ciat.
-		public string timezone; //the timezone id (see file timeZone.txt) varchar(40)
+		public TimeZone timezone; //TimeZone Object
 		public string modificationdate; //date of last modification in yyyy-MM-dd format
 
 		public GeoName(string geonameid, string name, string asciiname, string alternatenames,
 		               string latitude, string longitude, string featureclass, string featurecode,
 		               string countrycode, string cc2, string admin1code, string admin2code,
 		               string admin3code, string admin4code, string population, string elevation,
-		               string dem, string timezone, string modificationdate)
+		               string dem, TimeZone timezone, string modificationdate)
 		{
-			this.geonameid = geonameid;
+			this.geonameid = int.Parse(geonameid);
 			this.name = name;
 			this.asciiname = asciiname;
 			this.alternatenames = alternatenames;
@@ -93,8 +92,8 @@ namespace geonames
 			this.admin2code = admin2code;
 			this.admin3code = admin3code;
 			this.admin4code = admin4code;
-			this.population = population;
-			this.elevation = elevation;
+			if(!long.TryParse(population, out this.population)) this.population=0;
+			if(!int.TryParse(elevation, out this.elevation)) this.elevation=0;
 			this.dem = dem;
 			this.timezone = timezone;
 			this.modificationdate = modificationdate;
@@ -116,16 +115,27 @@ namespace geonames
 	}
 
 	class GeoDecoder {
-		public List<CountryInfo> countries;
-		public List<TimeZone> timezones;
-		public List<GeoName> geonames;
+		public Dictionary<string, GeoName> finalDict=new Dictionary<string, GeoName>();
+		public Dictionary<string, CountryInfo> countryDict=new Dictionary<string, CountryInfo>();
+		public Dictionary<string, TimeZone> timezoneDict = new Dictionary<string, TimeZone> ();
 
 		public GeoDecoder(string countrysrc,string  geosrc,string  timezonesrc){
 			//init
-			this.countries = new List<CountryInfo> ();
-			this.timezones = new List<TimeZone> ();
-			this.geonames = new List<GeoName> ();
 			string[] lines;
+
+			//decode timezones
+			lines = timezonesrc.Split ('\n');
+			for(int i=0; i<lines.Length; i++){
+				string line = lines [i];
+				if (line.Length==0 || line [0] == '#')
+					continue;
+				string[] tabs = line.Split ('\t');
+				TimeZone timezone = new TimeZone (
+					tabs [0], tabs [1], tabs [2], tabs [3]
+					);
+				timezoneDict [timezone.TimeZoneId] = timezone;
+			}
+
 			//decode countries
 			lines = countrysrc.Split ('\n');
 			for(int i=0; i<lines.Length; i++){
@@ -140,8 +150,9 @@ namespace geonames
 					tabs[12], tabs[13], tabs[14], tabs[15],
 					tabs[16], tabs[17], tabs[18]
 				);
-				this.countries.Add (country);
+				countryDict [country.ISO] = country;
 			}
+
 			//decode geonames
 			lines = geosrc.Split ('\n');
 			for(int i=0; i<lines.Length; i++){
@@ -154,81 +165,52 @@ namespace geonames
 					tabs [4], tabs [5], tabs [6], tabs [7],
 					tabs [8], tabs [9], tabs [10], tabs [11],
 					tabs [12], tabs [13], tabs [14], tabs [15],
-					tabs [16], tabs [17], tabs [18]
-				);
-				this.geonames.Add (geoname);
-			}
-			//decode timezones
-			lines = timezonesrc.Split ('\n');
-			for(int i=0; i<lines.Length; i++){
-				string line = lines [i];
-				if (line.Length==0 || line [0] == '#')
-					continue;
-				string[] tabs = line.Split ('\t');
-				TimeZone timezone = new TimeZone (
-					tabs [0], tabs [1], tabs [2], tabs [3]
+					tabs [16], timezoneDict[tabs [17]], tabs [18]
 					);
-				this.timezones.Add (timezone);
+				CountryInfo country = countryDict [geoname.countrycode];
+				GeoName old=null;
+				if(finalDict.TryGetValue (String.Format("{0}/{1}", country.ISO, geoname.name), out old)){
+					if (old.population > geoname.population)
+						continue;
+				}
+				finalDict [String.Format("{0}/{1}", country.ISO, geoname.name)] = geoname;
+				finalDict [String.Format("{0}/{1}", country.ISO3, geoname.name)] = geoname;
+				finalDict [String.Format("{0}/{1}", country.ISONumeric, geoname.name)] = geoname;
+				finalDict [String.Format("{0}/{1}", country.Country, geoname.name)] = geoname;
 			}
 		}
 
-		public string GetGMT(string strCountry, string strCity){
-			//get country
-			CountryInfo country = null;
-			switch (strCountry.Length) {
-				case 2:
-						//ISO
-					country = countries.Where (e=>e.ISO==strCountry).FirstOrDefault ();
-					break;
-			case 3:
-					int code;
-					if (int.TryParse (strCountry, out code)) {
-						//ISO-Numeric
-						country = countries.Where (e=>e.ISONumeric==strCountry).FirstOrDefault ();
-						break;
-					} else {
-						//ISO3
-						country = countries.Where (e=>e.ISO3==strCountry).FirstOrDefault ();
-						break;
-					}
-				default :
-					//Country Name
-					country = countries.Where (e=> e.Country==strCountry).OrderByDescending (e => e.Population).FirstOrDefault ();
-					break;
+		public string GetTimezone(string strCountry, string strCity){
+			try {
+				return finalDict[String.Format("{0}/{1}", strCountry, strCity)].timezone.TimeZoneId;
+			} catch(Exception ex){
+				return "Could not find any match.";
 			}
-			if (country == null)
-				return "Cannot find country.";
-
-			//get city
-			GeoName city = null;
-			city = geonames.Where (e=>e.name==strCity).OrderByDescending (e=>e.population).FirstOrDefault ();
-			if (city == null)
-				return "Could not find city.";
-			else
-				return city.timezone;
-
+		}
+		public string GetGMT(string strCountry, string strCity){
+			try {
+				return finalDict[String.Format("{0}/{1}", strCountry, strCity)].timezone.GMT;
+			} catch(Exception ex){
+				return "Could not find any match.";
+			}
 		}
 	}
 
 	class MainClass
 	{
-		public static void log(string msg){
-			Console.WriteLine(msg);
+		public static void test_Timezone(GeoDecoder decoder, string country, string city){
+			string result=decoder.GetTimezone (country, city);
+			//Console.WriteLine ("Result: "+result);
 		}
-		public static void test(GeoDecoder decoder, string country, string city){
-			Console.WriteLine ();
-			log ("Starting GetGMT("+country+","+city+").");
-			DateTime t1 = DateTime.Now;
+		public static void test_GMT(GeoDecoder decoder, string country, string city){
 			string result=decoder.GetGMT (country, city);
-			DateTime t2 = DateTime.Now;
-			log ("Parsing took " + (t2-t1).Milliseconds + " ms.");
-			Console.WriteLine ("Result: "+result);
+			//Console.WriteLine ("Result: "+result);
 		}
 
 		public static void Main (string[] args)
 		{
 			//download mock data
-			log ("Starting download.");
+			Console.WriteLine ("Starting download.");
 			DateTime t1 = DateTime.Now;
 			string countryurl = "http://download.geonames.org/export/dump/countryInfo.txt";
 			string countrysrc = new System.Net.WebClient ().DownloadString (countryurl);
@@ -237,28 +219,34 @@ namespace geonames
 			string timezoneurl = "http://download.geonames.org/export/dump/timeZones.txt";
 			string timezonesrc = new System.Net.WebClient ().DownloadString (timezoneurl);
 			DateTime t2 = DateTime.Now;
-			log ("Downloading took " + (t2-t1).Milliseconds + " ms.\n");
+			Console.WriteLine ("Downloading took " + (t2-t1).Milliseconds + " ms.\n");
 
-			//actual code
-			log ("Starting parsing.");
+			//data parsing
+			Console.WriteLine ("Starting parsing.");
 			t1 = DateTime.Now;
 			GeoDecoder decoder = new GeoDecoder (countrysrc, citysrc, timezonesrc);
 			t2 = DateTime.Now;
-			log ("Parsing took " + (t2-t1).Milliseconds + " ms.\n");
+			Console.WriteLine ("Parsing took " + (t2-t1).Milliseconds + " ms.\n");
 
-			//tests
-			test (decoder, "DK", "Copenhagen");
-			test (decoder, "DNK", "Copenhagen");
-			test (decoder, "208", "Copenhagen");
+			//test
+			Console.WriteLine ("Starting 10.000 test.");
+			t1 = DateTime.Now;
 
-			test (decoder, "DK", "Roskilde");
-			test (decoder, "DNK", "Roskilde");
-			test (decoder, "208", "Roskilde");
+			for (int i = 0; i<1000; i++) {
+				test_Timezone (decoder, "DK", "Copenhagen");
+				test_Timezone (decoder, "DNK", "Copenhagen");
+				test_Timezone (decoder, "208", "Copenhagen");
+				test_Timezone (decoder, "DK", "Roskilde");
+				test_Timezone (decoder, "DNK", "Roskilde");
+				test_Timezone (decoder, "208", "Roskilde");
+				test_Timezone (decoder, "RO", "Craiova");
+				test_Timezone (decoder, "ROU", "Oradea");
+				test_Timezone (decoder, "642", "Arad");
+				test_Timezone (decoder, "Denmark", "Copenhagen");
+			}
 
-			test (decoder, "RO", "Craiova");
-			test (decoder, "ROU", "Oradea");
-			test (decoder, "642", "Arad");
-
+			t2 = DateTime.Now;
+			Console.WriteLine ("10.000 test took " + (t2-t1).Milliseconds + " ms.\n");
 		}
 	}
 }
