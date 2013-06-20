@@ -169,14 +169,14 @@ namespace geonames
 					);
 				CountryInfo country = countryDict [geoname.countrycode];
 				GeoName old=null;
-				if(finalDict.TryGetValue (String.Format("{0}/{1}", country.ISO, geoname.name), out old)){
+				if(finalDict.TryGetValue (String.Format("{0}/{1}", country.ISO, geoname.asciiname), out old)){
 					if (old.population > geoname.population)
 						continue;
 				}
-				finalDict [String.Format("{0}/{1}", country.ISO, geoname.name)] = geoname;
-				finalDict [String.Format("{0}/{1}", country.ISO3, geoname.name)] = geoname;
-				finalDict [String.Format("{0}/{1}", country.ISONumeric, geoname.name)] = geoname;
-				finalDict [String.Format("{0}/{1}", country.Country, geoname.name)] = geoname;
+				finalDict [String.Format("{0}/{1}", country.ISO, geoname.asciiname)] = geoname;
+				finalDict [String.Format("{0}/{1}", country.ISO3, geoname.asciiname)] = geoname;
+				finalDict [String.Format("{0}/{1}", country.ISONumeric, geoname.asciiname)] = geoname;
+				finalDict [String.Format("{0}/{1}", country.Country, geoname.asciiname)] = geoname;
 			}
 		}
 
