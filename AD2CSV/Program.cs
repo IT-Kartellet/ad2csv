@@ -146,6 +146,15 @@ namespace AD2CSV
             searcher.SearchScope = SearchScope.Subtree;
             searcher.PageSize = 1000;
 
+            string countryurl = "http://download.geonames.org/export/dump/countryInfo.txt";
+            string countrysrc = new System.Net.WebClient().DownloadString(countryurl);
+            string cityurl = "http://stormies.dk/cities1000.txt";
+            string citysrc = new System.Net.WebClient().DownloadString(cityurl);
+            string timezoneurl = "http://download.geonames.org/export/dump/timeZones.txt";
+            string timezonesrc = new System.Net.WebClient().DownloadString(timezoneurl);
+       
+            var decoder = new geonames.GeoDecoder(countrysrc, citysrc, timezonesrc);
+
             int count = 0;
             using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile, false))
             {
@@ -215,11 +224,52 @@ namespace AD2CSV
                     }
                     if (skip) continue;
 
+
+                    // Lookup city information base
+                    string country = null;
+                    string city = null;
+                    string latetude = null;
+                    string longitude = null;
+                    string timezone = null;
+                    if (entry.Properties.Contains("c") && entry.Properties["c"].Count > 0)
+                    {
+                        country = entry.Properties["c"][0].ToString();
+                    }
+                    if (entry.Properties.Contains("l") && entry.Properties["l"].Count > 0)
+                    {
+                        city = entry.Properties["l"][0].ToString();
+                    }
+
+                    if (country != null && city != null) {
+                        var geoentry = decoder.GetEntry(country, city);
+                        if (geoentry != null)
+                        {
+                            latetude = geoentry.latitude;
+                            longitude = geoentry.longitude;
+                            timezone = geoentry.timezone.TimeZoneId;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Could not find {0}, {1}", country, city);
+                        }
+                    }
+
                     // Create line for output 
                     var line = new List<string>();
                     foreach (var name in properties)
                     {
-                        if (!String.IsNullOrEmpty(name) && entry.Properties.Contains(name) && entry.Properties[name].Count > 0)
+                        if(name != null && name.StartsWith("=TimeZone") && timezone != null) {
+                            line.Add(timezone);
+                        }
+                        else if (name != null && name.StartsWith("=Latetude") && latetude != null)
+                        {
+                            line.Add(latetude);
+                        }
+                        else if (name != null && name.StartsWith("=Longitude") && longitude != null)
+                        {
+                            line.Add(longitude);
+                        }
+                        else if (!String.IsNullOrEmpty(name) && entry.Properties.Contains(name) && entry.Properties[name].Count > 0)
                         {
                             var value = entry.Properties[name][0].ToString();
 

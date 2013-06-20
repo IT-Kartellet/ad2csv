@@ -180,18 +180,30 @@ namespace geonames
 			}
 		}
 
+        public GeoName GetEntry(string strCountry, string strCity)
+        {
+            try
+            {
+                return finalDict[String.Format("{0}/{1}", strCountry, strCity)];
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
 		public string GetTimezone(string strCountry, string strCity){
 			try {
 				return finalDict[String.Format("{0}/{1}", strCountry, strCity)].timezone.TimeZoneId;
 			} catch(Exception ex){
-				return "Could not find any match.";
+                return null;
 			}
 		}
 		public string GetGMT(string strCountry, string strCity){
 			try {
 				return finalDict[String.Format("{0}/{1}", strCountry, strCity)].timezone.GMT;
 			} catch(Exception ex){
-				return "Could not find any match.";
+                return null;
 			}
 		}
 
