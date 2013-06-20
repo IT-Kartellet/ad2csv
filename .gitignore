@@ -1,3 +1,7 @@
 /*.suo
 /AD2CSV/bin
 /AD2CSV/obj
+
+.DS_Store
+
+*.userprefs
