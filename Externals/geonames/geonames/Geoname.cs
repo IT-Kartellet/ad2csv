@@ -186,7 +186,7 @@ namespace geonames
             {
                 return finalDict[String.Format("{0}/{1}", strCountry, strCity)];
             }
-            catch (Exception ex)
+            catch
             {
                 return null;
             }
@@ -195,14 +195,14 @@ namespace geonames
 		public string GetTimezone(string strCountry, string strCity){
 			try {
 				return finalDict[String.Format("{0}/{1}", strCountry, strCity)].timezone.TimeZoneId;
-			} catch(Exception ex){
+			} catch {
                 return null;
 			}
 		}
 		public string GetGMT(string strCountry, string strCity){
 			try {
 				return finalDict[String.Format("{0}/{1}", strCountry, strCity)].timezone.GMT;
-			} catch(Exception ex){
+			} catch {
                 return null;
 			}
 		}

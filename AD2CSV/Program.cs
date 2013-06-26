@@ -156,7 +156,7 @@ namespace AD2CSV
             var decoder = new geonames.GeoDecoder(countrysrc, citysrc, timezonesrc);
 
             int count = 0;
-            using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile, false))
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile + ".tmp", false))
             {
                 file.WriteLine(String.Join(delimiter.ToString(), headers));
 
@@ -297,6 +297,8 @@ namespace AD2CSV
                     count++;
                 }
             }
+            File.Replace(outfile + ".tmp", outfile, outfile + ".bak");
+
             Console.WriteLine();
             Console.WriteLine("Count: {0}", count);
         }
