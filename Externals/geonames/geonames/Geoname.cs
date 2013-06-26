@@ -120,6 +120,13 @@ namespace geonames
 		public Dictionary<string, TimeZone> timezoneDict = new Dictionary<string, TimeZone> ();
 
 		public GeoDecoder(string countrysrc,string  geosrc,string  timezonesrc){
+
+			//Exception mapping
+			//Note this maps a city to a different city not a timezone
+			Dictionary<string, string> exceptionMap = new Dictionary<string, string> ();
+			exceptionMap["CN/Hong Kong"]="CN/Beijing";
+			exceptionMap["China/Hong Kong"]="China/Beijing";
+
 			//init
 			string[] lines;
 
@@ -193,6 +200,11 @@ namespace geonames
 					}
 				}
 
+			}
+
+			//map exceptions
+			foreach (var exception in exceptionMap) {
+				finalDict [exception.Key] = finalDict [exception.Value];
 			}
 		}
 
