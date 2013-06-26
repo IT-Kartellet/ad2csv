@@ -123,6 +123,13 @@ namespace AD2CSV
                 skipdisabledaccount = true;
             }
 
+            int mincount;
+            if (!int.TryParse(ConfigurationManager.AppSettings["MinimumCount"], out mincount))
+            {
+                mincount = 1;
+            }
+
+
             DirectorySearcher ds = new DirectorySearcher();
             SearchResult sr = ds.FindOne();
             var adroot = sr.GetDirectoryEntry().Path;
@@ -297,10 +304,26 @@ namespace AD2CSV
                     count++;
                 }
             }
-            File.Replace(outfile + ".tmp", outfile, outfile + ".bak");
 
-            Console.WriteLine();
-            Console.WriteLine("Count: {0}", count);
+            if (count > mincount)
+            {
+
+                if (File.Exists(outfile))
+                {
+                    File.Replace(outfile + ".tmp", outfile, outfile + ".bak");
+                }
+                else
+                {
+                    File.Move(outfile + ".tmp", outfile);
+                }
+                Console.WriteLine();
+                Console.WriteLine("Count: {0}", count);
+            }
+            else
+            {
+                Console.WriteLine("To few records found so not replacing {0}: {1} < {2}", outfile, count, mincount);
+                Console.ReadKey();
+            }
         }
 
         public static Int64 ConvertADSLargeIntegerToInt64(object adsLargeInteger)
