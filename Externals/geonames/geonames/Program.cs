@@ -6,7 +6,7 @@ namespace geonames
 	{
 		public static void test_Timezone(GeoDecoder decoder, string country, string city){
 			string result=decoder.GetTimezone (country, city);
-			//Console.WriteLine ("Result: "+result);
+			Console.WriteLine ("Result: "+result);
 		}
 		public static void test_GMT(GeoDecoder decoder, string country, string city){
 			string result=decoder.GetGMT (country, city);

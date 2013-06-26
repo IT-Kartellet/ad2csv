@@ -177,6 +177,22 @@ namespace geonames
 				finalDict [String.Format("{0}/{1}", country.ISO3, geoname.asciiname)] = geoname;
 				finalDict [String.Format("{0}/{1}", country.ISONumeric, geoname.asciiname)] = geoname;
 				finalDict [String.Format("{0}/{1}", country.Country, geoname.asciiname)] = geoname;
+
+				finalDict [String.Format("{0}/{1}", country.ISO, geoname.name)] = geoname;
+				finalDict [String.Format("{0}/{1}", country.ISO3, geoname.name)] = geoname;
+				finalDict [String.Format("{0}/{1}", country.ISONumeric, geoname.name)] = geoname;
+				finalDict [String.Format("{0}/{1}", country.Country, geoname.name)] = geoname;
+
+				if(geoname.alternatenames!=null && geoname.alternatenames.Length>0){
+					string[] alternate_names = geoname.alternatenames.Split (',');
+					foreach(string alternate_name in alternate_names){
+						finalDict [String.Format("{0}/{1}", country.ISO, alternate_name)] = geoname;
+						finalDict [String.Format("{0}/{1}", country.ISO3, alternate_name)] = geoname;
+						finalDict [String.Format("{0}/{1}", country.ISONumeric, alternate_name)] = geoname;
+						finalDict [String.Format("{0}/{1}", country.Country, alternate_name)] = geoname;
+					}
+				}
+
 			}
 		}
 
