@@ -39,16 +39,8 @@ namespace geonames
 			t1 = DateTime.Now;
 
 			for (int i = 0; i<1000; i++) {
-				test_Timezone (decoder, "DK", "Copenhagen");
-				test_Timezone (decoder, "DNK", "Copenhagen");
-				test_Timezone (decoder, "208", "Copenhagen");
-				test_Timezone (decoder, "DK", "Roskilde");
-				test_Timezone (decoder, "DNK", "Roskilde");
-				test_Timezone (decoder, "208", "Roskilde");
-				test_Timezone (decoder, "RO", "Craiova");
-				test_Timezone (decoder, "ROU", "Oradea");
-				test_Timezone (decoder, "642", "Arad");
-				test_Timezone (decoder, "Denmark", "Copenhagen");
+				test_Timezone (decoder, "CN", "Hong Kong");
+				test_Timezone (decoder, "China", "Hong Kong");
 			}
 
 			t2 = DateTime.Now;
