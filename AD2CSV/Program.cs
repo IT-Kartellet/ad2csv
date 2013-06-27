@@ -129,6 +129,47 @@ namespace AD2CSV
                 mincount = 1;
             }
 
+            string countrysrc;
+            string citysrc;
+            string timezonesrc;
+
+            string tempPath = System.IO.Path.GetTempPath();
+
+            if(File.Exists(Path.Combine(tempPath, "countryInfo.txt"))) {
+                countrysrc = File.ReadAllText(Path.Combine(tempPath, "countryInfo.txt"), Encoding.UTF8);
+            }
+            else
+            {
+                countrysrc = new System.Net.WebClient().DownloadString("http://download.geonames.org/export/dump/countryInfo.txt");
+                File.WriteAllText(Path.Combine(tempPath, "countryInfo.txt"), countrysrc, Encoding.UTF8);
+            }
+
+            if(File.Exists(Path.Combine(tempPath, "cities1000.txt"))) {
+                citysrc = File.ReadAllText(Path.Combine(tempPath, "cities1000.txt"), Encoding.UTF8);
+            }
+            else
+            {
+                citysrc = new System.Net.WebClient().DownloadString("http://stormies.dk/cities1000.txt"); // FIXME: Add support for extracting from zip.
+                File.WriteAllText(Path.Combine(tempPath, "cities1000.txt"), citysrc, Encoding.UTF8);
+            }
+            
+            if(File.Exists(Path.Combine(tempPath, "timeZones.txt"))) {
+                timezonesrc = File.ReadAllText(Path.Combine(tempPath, "timeZones.txt"), Encoding.UTF8);
+            }
+            else
+            {
+                timezonesrc = new System.Net.WebClient().DownloadString("http://download.geonames.org/export/dump/timeZones.txt");
+                File.WriteAllText(Path.Combine(tempPath, "timeZones.txt"), timezonesrc, Encoding.UTF8);
+            }
+            
+            //FIXME: Move this to config file Exception mapping
+            //Note this maps a city to a different city not a timezone
+            Dictionary<string, string> exceptionMap = new Dictionary<string, string>();
+            exceptionMap["CN/Hong Kong"] = "HK/Hong Kong";
+            exceptionMap["China/Hong Kong"] = "HK/Hong Kong";
+            exceptionMap["US/Giralda Farms"] = "US/Madison";
+
+            var decoder = new geonames.GeoDecoder(countrysrc, citysrc, timezonesrc, exceptionMap);
 
             DirectorySearcher ds = new DirectorySearcher();
             SearchResult sr = ds.FindOne();
@@ -152,15 +193,6 @@ namespace AD2CSV
             searcher.ReferralChasing = ReferralChasingOption.None;
             searcher.SearchScope = SearchScope.Subtree;
             searcher.PageSize = 1000;
-
-            string countryurl = "http://download.geonames.org/export/dump/countryInfo.txt";
-            string countrysrc = new System.Net.WebClient().DownloadString(countryurl);
-            string cityurl = "http://stormies.dk/cities1000.txt";
-            string citysrc = new System.Net.WebClient().DownloadString(cityurl);
-            string timezoneurl = "http://download.geonames.org/export/dump/timeZones.txt";
-            string timezonesrc = new System.Net.WebClient().DownloadString(timezoneurl);
-       
-            var decoder = new geonames.GeoDecoder(countrysrc, citysrc, timezonesrc);
 
             int count = 0;
             using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile + ".tmp", false))

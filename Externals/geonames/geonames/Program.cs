@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace geonames
 {
@@ -27,10 +28,17 @@ namespace geonames
 			DateTime t2 = DateTime.Now;
 			Console.WriteLine ("Downloading took " + (t2-t1).Milliseconds + " ms.\n");
 
+            //Exception mapping
+            //Note this maps a city to a different city not a timezone
+            Dictionary<string, string> exceptionMap = new Dictionary<string, string>();
+            exceptionMap["CN/Hong Kong"] = "CN/Beijing";
+            exceptionMap["China/Hong Kong"] = "China/Beijing";
+
+
 			//data parsing
 			Console.WriteLine ("Starting parsing.");
 			t1 = DateTime.Now;
-			GeoDecoder decoder = new GeoDecoder (countrysrc, citysrc, timezonesrc);
+            GeoDecoder decoder = new GeoDecoder(countrysrc, citysrc, timezonesrc, exceptionMap);
 			t2 = DateTime.Now;
 			Console.WriteLine ("Parsing took " + (t2-t1).Milliseconds + " ms.\n");
 

@@ -13,3 +13,6 @@
 *.exe
 
 *.mdb
+/Externals/geonames/*.suo
+/Externals/geonames/geonames/bin/Debug/*.manifest
+/Externals/geonames/geonames/obj/x86/Debug/*.cache
