@@ -195,7 +195,7 @@ namespace AD2CSV
             searcher.PageSize = 1000;
 
             int count = 0;
-            using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile + ".tmp", false))
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(outfile + ".tmp", false, Encoding.UTF8))
             {
                 file.WriteLine(String.Join(delimiter.ToString(), headers));
 
@@ -222,10 +222,18 @@ namespace AD2CSV
                     // Check if the password expired x days ago
                     if (skipexpiredpassword > 0)
                     {
-                        var pwdLastSet = DateTime.FromFileTime(ConvertADSLargeIntegerToInt64(entry.Properties["pwdLastSet"].Value));
-                        var pwdLimit = DateTime.Now.AddDays(skipexpiredpassword * -1);
-                        if (pwdLastSet < pwdLimit)
+                        if (entry.Properties.Contains("pwdLastSet"))
                         {
+                            var pwdLastSet = DateTime.FromFileTime(ConvertADSLargeIntegerToInt64(entry.Properties["pwdLastSet"].Value));
+                            var pwdLimit = DateTime.Now.AddDays(skipexpiredpassword * -1);
+                            if (pwdLastSet < pwdLimit)
+                            {
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Username {0} has never set a password", entry.Properties["sAMAccountName"].Value.ToString());
                             continue;
                         }
                     }
@@ -320,7 +328,7 @@ namespace AD2CSV
                             // Check if need to quote the item in the line
                             if (quotealways || value.IndexOf(quotechar) > -1 || value.IndexOf(delimiter) > -1)
                             {
-                                line.Add(value.Replace(quotechar.ToString(), (quotechar + quotechar).ToString()));
+                                line.Add(quotechar + value.Replace(quotechar.ToString(), (quotechar.ToString() + quotechar.ToString())) + quotechar);
                             }
                             else
                             {
@@ -342,7 +350,15 @@ namespace AD2CSV
 
                 if (File.Exists(outfile))
                 {
-                    File.Replace(outfile + ".tmp", outfile, outfile + ".bak");
+                    try
+                    {
+                        File.Replace(outfile + ".tmp", outfile, outfile + ".bak");
+                    }
+                    catch(Exception ex)
+                    {
+                        Console.WriteLine("Failed to update file {0} because of: {1}", outfile, ex.Message);
+                        File.Delete(outfile + ".tmp");
+                    }
                 }
                 else
                 {
@@ -354,7 +370,7 @@ namespace AD2CSV
             else
             {
                 Console.WriteLine("To few records found so not replacing {0}: {1} < {2}", outfile, count, mincount);
-                Console.ReadKey();
+                //Console.ReadKey();
             }
         }
 
